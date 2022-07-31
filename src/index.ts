@@ -65,17 +65,14 @@ export class JSI {
 
     constructor(jsi: Jsi, option?: 'oneOf' | 'anyOf' | 'allOf') {
         Object.keys(jsi).forEach((dir) => {
-            if (!this[dir]) {
-                defineReadOnly(this, dir, {} as any);
-            }
             const hasSingle = !!(jsi[dir].schema as any).properties;
             if (hasSingle) {
                 const property = jsi[dir].schema as Property;
                 if (property) {
                     const properties = property.properties;
                     properties && this.createMethod(
-                        this[dir],
-                        property.title || dir,
+                        this,
+                        dir,
                         property.required || [],
                         properties,
                         {},
@@ -83,6 +80,9 @@ export class JSI {
                     );
                 }
             } else {
+                if (!this[dir]) {
+                    defineReadOnly(this, dir, {} as any);
+                }    
                 const schema = jsi[dir].schema as JsonSchemaInterface;
                 if (schema) {
                     const methods = schema[option || 'anyOf'];
