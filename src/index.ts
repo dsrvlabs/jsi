@@ -37,7 +37,7 @@ export interface Jsi {
 }
 
 export type BuildMethod = (required: string[], properties: Properties, definitions: Definitions) => ContractFunction;
-export type ContractFunction<T = any> = (...args: Array<any>) => Promise<T>;
+export type ContractFunction<T = any> = (...params: Array<any>) => Promise<T>;
 
 export function defineReadOnly<T, K extends keyof T>(object: T, name: K, value: T[K]): void {
     Object.defineProperty(object, name, {
@@ -123,6 +123,40 @@ export class JSI {
                     defineReadOnly((root as any), dir, fnc(required, properties, definitions));
                 }
             }
+        });
+    }
+
+    static ParametersVerifier(required: string[], properties: Properties, definitions: Definitions, params: any[]) {
+        function Verifier(property: Property, definitions: Definitions, param: any) {
+            switch(property.type) {
+                case "string":
+                    if (typeof param !== 'string') {
+                        throw new Error(`${param} is not a string.`);
+                    }
+                    break;
+                case "integer":
+                    if (typeof param !== 'number') {
+                        throw new Error(`${param} is not a number.`);
+                    }
+                    break;
+                default:
+                    const ref = property['$ref'];
+                    if (!ref) {
+                        throw new Error(`${param} has no ref.`);
+                    }
+                    if (!definitions[ref.replace("#/definitions/", "")]) {
+                        throw new Error(`${param} has no definition. ${ref}`);
+                    }
+                    Verifier( { type: definitions[ref.replace("#/definitions/", "")].type }, definitions, param);
+                    break;
+            }
+        }
+
+        if (params.length !== required.length) {
+            throw new Error(`input params (${params}) error: it need ${required.length} params.`);
+          }
+          required.forEach((param, index) => {
+            Verifier(properties[param], definitions, params[index]);
         });
     }
 }
