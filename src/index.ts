@@ -30,12 +30,14 @@ export interface JsonSchemaInterface {
   definitions?: Definitions;
 }
 
-export interface Jsi {
-  [type: string]: {
-    schema: JsonSchemaInterface | Property;
-    // eslint-disable-next-line no-use-before-define
-    buildMethod: BuildMethod;
-  };
+export interface Schema {
+  schema: JsonSchemaInterface | Property;
+  // eslint-disable-next-line no-use-before-define
+  buildMethod: BuildMethod;
+}
+
+export interface ContractMethods {
+  [type: string]: Schema;
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -49,7 +51,7 @@ export type BuildMethod = (
   definitions: Definitions
 ) => ContractFunction;
 
-export function defineReadOnly<T, K extends keyof T>(
+function defineReadOnly<T, K extends keyof T>(
   object: T,
   name: K,
   value: T[K]
@@ -118,11 +120,14 @@ function Verifier(
 export class JSI {
   readonly [type: string]: any;
 
-  constructor(jsi: Jsi, option?: "oneOf" | "anyOf" | "allOf") {
-    Object.keys(jsi).forEach((dir) => {
-      const hasSingle = !!(jsi[dir].schema as any).properties;
+  constructor(
+    contractMethods: ContractMethods,
+    option?: "oneOf" | "anyOf" | "allOf"
+  ) {
+    Object.keys(contractMethods).forEach((dir) => {
+      const hasSingle = !!(contractMethods[dir].schema as any).properties;
       if (hasSingle) {
-        const property = jsi[dir].schema as Property;
+        const property = contractMethods[dir].schema as Property;
         if (property) {
           const { properties } = property;
           if (properties) {
@@ -132,7 +137,7 @@ export class JSI {
               property.required || [],
               properties,
               {},
-              jsi[dir].buildMethod
+              contractMethods[dir].buildMethod
             );
           }
         }
@@ -140,7 +145,7 @@ export class JSI {
         if (!this[dir]) {
           defineReadOnly(this, dir, {} as any);
         }
-        const schema = jsi[dir].schema as JsonSchemaInterface;
+        const schema = contractMethods[dir].schema as JsonSchemaInterface;
         if (schema) {
           const methods = schema[option || "anyOf"];
           if (methods) {
@@ -154,7 +159,7 @@ export class JSI {
                     method.properties[name].required || [],
                     properties,
                     schema.definitions || {},
-                    jsi[dir].buildMethod
+                    contractMethods[dir].buildMethod
                   );
                 }
               });
