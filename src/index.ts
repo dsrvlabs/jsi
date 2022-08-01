@@ -1,6 +1,6 @@
 export interface Property {
     title?: string;
-    type?: string;
+    type?: string | string[];
     format?: string;
     '$ref'?: string;
     required?: string[];
@@ -127,36 +127,41 @@ export class JSI {
     }
 
     static ParametersVerifier(required: string[], properties: Properties, definitions: Definitions, params: any[]) {
-        function Verifier(property: Property, definitions: Definitions, param: any) {
-            switch(property.type) {
-                case "string":
-                    if (typeof param !== 'string') {
-                        throw new Error(`${param} is not a string.`);
-                    }
-                    break;
-                case "integer":
-                    if (typeof param !== 'number') {
-                        throw new Error(`${param} is not a number.`);
-                    }
-                    break;
-                default:
-                    const ref = property['$ref'];
-                    if (!ref) {
-                        throw new Error(`${param} has no ref.`);
-                    }
-                    if (!definitions[ref.replace("#/definitions/", "")]) {
-                        throw new Error(`${param} has no definition. ${ref}`);
-                    }
-                    Verifier( { type: definitions[ref.replace("#/definitions/", "")].type }, definitions, param);
-                    break;
+        function Verifier(name: string, property: Property, definitions: Definitions, param: any) {
+            if (typeof property.type === 'string') {
+                switch(property.type) {
+                    case "string":
+                        if (typeof param !== 'string') {
+                            throw new Error(`${name} (${param}) is not a string.`);
+                        }
+                        break;
+                    case "integer":
+                        if (typeof param !== 'number') {
+                            throw new Error(`${name} (${param}) is not a number.`);
+                        }
+                        break;
+                    default:
+                        const ref = property['$ref'];
+                        if (!ref) {
+                            throw new Error(`${name} (${param}) has no ref.`);
+                        }
+                        if (!definitions[ref.replace("#/definitions/", "")]) {
+                            throw new Error(`${name} (${param}) has no definition. ${ref}`);
+                        }
+                        Verifier(name, { type: definitions[ref.replace("#/definitions/", "")].type }, definitions, param);
+                        break;
+                }
+            } else if (property.type && property.type.length > 0 && param) {
+                Verifier(name, { type: property.type[0] }, definitions, param);
             }
         }
 
-        if (params.length !== required.length) {
+        if (params.length < required.length) {
             throw new Error(`input params (${params}) error: it need ${required.length} params.`);
           }
-          required.forEach((param, index) => {
-            Verifier(properties[param], definitions, params[index]);
+          params.forEach((param, index) => {
+            const key = Object.keys(properties)[index];
+            Verifier(key, properties[key], definitions, param);
         });
     }
 }
