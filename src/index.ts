@@ -44,6 +44,8 @@ export interface ContractMethods {
 export type ContractFunction<T = any> = (...params: Array<any>) => Promise<T>;
 export type BuildMethod = (
   // eslint-disable-next-line no-unused-vars
+  methodName: string,
+  // eslint-disable-next-line no-unused-vars
   required: string[],
   // eslint-disable-next-line no-unused-vars
   properties: Properties,
@@ -172,7 +174,7 @@ export class JSI {
 
   private createMethod(
     root: Object,
-    dir: string,
+    methodName: string,
     required: string[],
     properties: Properties | undefined,
     definitions: Definitions,
@@ -181,20 +183,20 @@ export class JSI {
     if (properties) {
       Object.keys(properties).forEach((key) => {
         if (hasProperty(properties[key].properties)) {
-          defineReadOnly(root as any, dir, {} as any);
+          defineReadOnly(root as any, methodName, {} as any);
           this.createMethod(
-            (root as any)[dir],
+            (root as any)[methodName],
             key,
             properties[key].required || [],
             properties[key].properties,
             definitions,
             fnc
           );
-        } else if (!(root as any)[dir]) {
+        } else if (!(root as any)[methodName]) {
           defineReadOnly(
             root as any,
-            dir,
-            fnc(required, properties, definitions)
+            methodName,
+            fnc(methodName, required, properties, definitions)
           );
         }
       });
