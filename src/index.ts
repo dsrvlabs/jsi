@@ -127,8 +127,8 @@ export class JSI {
     option?: "oneOf" | "anyOf" | "allOf"
   ) {
     Object.keys(contractMethods).forEach((dir) => {
-      const hasSingle = !!(contractMethods[dir].schema as any).properties;
-      if (hasSingle) {
+      const isSingle = !!(contractMethods[dir].schema as any).properties;
+      if (isSingle) {
         const property = contractMethods[dir].schema as Property;
         if (property) {
           const { properties } = property;
